@@ -49,13 +49,22 @@
   let shards = [];
   let enemies = [];
   let bullets = [];
+  let enemyBullets = [];
   let particles = [];
   let meteors = [];
   let powerups = [];
   let floaters = [];
   let islands = [];
   let seaFacets = [];
+  let wakes = [];
+  let rain = [];
   let run;
+  const biomes=[
+    {name:'AZURE REACH',top:'#0b3044',mid:'#0b2536',bottom:'#06111c',accent:'#64f0da',weather:'clear'},
+    {name:'EMBER SHOALS',top:'#402a35',mid:'#1f2735',bottom:'#09111d',accent:'#ff9a72',weather:'embers'},
+    {name:'VIOLET ABYSS',top:'#271d46',mid:'#171936',bottom:'#080d1c',accent:'#bd75ff',weather:'storm'}
+  ];
+  const currentBiome=()=>biomes[Math.floor(((run?.wave||1)-1)/3)%biomes.length];
 
   const audio = {
     ctx: null,
@@ -117,6 +126,7 @@
       }
     }
     islands = Array.from({ length: Math.max(5, Math.round(H / 145)) }, (_, i) => makeIsland(rand(-20, W + 20), i * (H / 5) + rand(-80, 80), rand(26, 62)));
+    rain=Array.from({length:Math.min(55,Math.round(W*H/9000))},()=>({x:rand(0,W),y:rand(0,H),l:rand(8,25),speed:rand(380,720),alpha:rand(.08,.3)}));
   }
 
   function makeIsland(x, y, r) {
@@ -126,12 +136,12 @@
       const a = i / n * TAU;
       pts.push({ a, r: r * rand(.72, 1.15) });
     }
-    return { x, y, r, pts, speed: rand(8, 18), spin: rand(-.03, .03), angle: rand(0, TAU), hue: Math.random() };
+    return { x, y, r, pts, speed: rand(8, 18), spin: rand(-.03, .03), angle: rand(0, TAU), hue: Math.random(), detail:Math.floor(rand(2,6)), crystal:Math.random()<.34 };
   }
 
   function resetGame() {
     time = 0; shake = 0; flash = 0;
-    shards = []; enemies = []; bullets = []; particles = []; meteors = []; powerups = []; floaters = [];
+    shards = []; enemies = []; bullets = []; enemyBullets = []; particles = []; meteors = []; powerups = []; wakes=[]; floaters = [];
     run = {
       elapsed: 0, score: 0, wave: 1, level: 1, xp: 0, xpNeed: 8, collected: 0,
       enemyTimer: .6, shardTimer: .15, meteorTimer: 10, combo: 0, comboTimer: 0,
@@ -139,11 +149,12 @@
       bossWave:0, bossSpawned:false, objective:'Collect shards and survive'
     };
     const rank = window.Shardwake?.profile?.level || 1;
+    const perks=window.Shardwake?.profile?.perks||{};
     player = {
       x: W / 2, y: H * .68, vx: 0, vy: 0, angle: -Math.PI / 2, radius: 15,
-      hp: 100 + Math.min(30,rank*2), maxHp: 100 + Math.min(30,rank*2), speed: 235 + Math.min(20,rank), accel: 7.5,
+      hp: 100 + Math.min(30,rank*2)+(perks.hull||0)*6, maxHp: 100 + Math.min(30,rank*2)+(perks.hull||0)*6, speed: (235 + Math.min(20,rank))*(1+(perks.engine||0)*.03), accel: 7.5,
       invuln: 0, dashTime: 0, dashCooldown: 0, dashCooldownMax: 3.3, dashPower: 680,
-      magnet: 75, fireTimer: .35, fireRate: .78, bulletDamage: 1, bulletSpeed: 500,
+      magnet: 75+(perks.magnet||0)*8, fireTimer: .35, fireRate: .78*(1-(perks.cannon||0)*.04), bulletDamage: 1, bulletSpeed: 500,
       shield: 0, pickupValue: 1, multishot: 1, pierce: 0, drone: 0, droneTimer: 0,
       abilityCooldown:0, abilityCooldownMax:12, overdrive:0
     };
@@ -235,19 +246,21 @@
     if (run.wave >= 2 && roll > .72) type = 'spinner';
     if (run.wave >= 4 && roll > .88) type = 'brute';
     if (run.wave >= 7 && roll > .95) type = 'wraith';
+    if (run.wave >= 3 && roll > .82 && roll < .9) type = 'seer';
     const data = {
       hunter: { r: 14, speed: rand(68, 88) + run.wave * 4, hp: 2 + Math.floor(run.wave / 4), damage: 18, score: 55 },
       spinner: { r: 18, speed: rand(48, 62) + run.wave * 3, hp: 4 + Math.floor(run.wave / 3), damage: 24, score: 95 },
       brute: { r: 27, speed: rand(28, 40) + run.wave * 2, hp: 9 + run.wave, damage: 34, score: 180 },
-      wraith: { r: 16, speed: rand(90,110)+run.wave*3, hp: 5+Math.floor(run.wave/2), damage:27, score:150 }
+      wraith: { r: 16, speed: rand(90,110)+run.wave*3, hp: 5+Math.floor(run.wave/2), damage:27, score:150 },
+      seer: { r: 19, speed: rand(38,48)+run.wave*2, hp: 5+Math.floor(run.wave/3), damage:16, score:135 }
     }[type];
     data.speed*=difficulty(); data.damage=Math.round(data.damage*difficulty()); data.hp=Math.max(1,Math.round(data.hp*difficulty()));
-    enemies.push({ x, y, vx: 0, vy: 0, angle: rand(0,TAU), spin: rand(-2,2), type, hit: 0, dead: false, ...data, maxHp: data.hp, wobble: rand(0,TAU) });
+    enemies.push({ x, y, vx: 0, vy: 0, angle: rand(0,TAU), spin: rand(-2,2), type, hit: 0, dead: false, ...data, maxHp: data.hp, wobble: rand(0,TAU),fireTimer:rand(1,2.4) });
   }
 
   function spawnBoss(){
     const hp=Math.round((65+run.wave*14)*difficulty());
-    enemies.push({x:W/2,y:-70,vx:0,vy:0,angle:0,spin:.5,type:'boss',hit:0,dead:false,r:48,speed:32+run.wave,damage:42,score:1800,hp,maxHp:hp,wobble:0,boss:true});
+    enemies.push({x:W/2,y:-70,vx:0,vy:0,angle:0,spin:.5,type:'boss',hit:0,dead:false,r:48,speed:32+run.wave,damage:42,score:1800,hp,maxHp:hp,wobble:0,boss:true,fireTimer:1.6,phase:1});
     run.bossSpawned=true; run.objective='Destroy the Abyssal Leviathan'; ui.bossBar.classList.remove('hidden');
     window.Shardwake?.toast?.('LEVIATHAN AWAKENED','coral'); haptic([30,50,30]);
   }
@@ -257,10 +270,17 @@
     powerups.push({x,y,type,r:13,a:0,life:12});
   }
 
+  function enemyShoot(e,radial=false){
+    const base=Math.atan2(player.y-e.y,player.x-e.x),count=radial?Math.min(12,6+(e.phase||1)*2):1;
+    for(let i=0;i<count;i++){const a=radial?i/count*TAU+time*.25:base;enemyBullets.push({x:e.x,y:e.y,vx:Math.cos(a)*(radial?125:175),vy:Math.sin(a)*(radial?125:175),r:radial?5:6,life:5,damage:radial?12:16,phase:e.boss});}
+    audio.tone(115,.12,'sawtooth',.018,45);
+  }
+
   function useAbility(){
     if(state!=='playing'||player.abilityCooldown>0)return;
     player.abilityCooldown=player.abilityCooldownMax; shake=Math.max(shake,8); haptic([12,25,12]); audio.level();
     for(const e of enemies){const d=Math.hypot(e.x-player.x,e.y-player.y);if(d<220){e.hp-=4+Math.floor(run.level/3);e.x+=(e.x-player.x)/(d||1)*75;e.y+=(e.y-player.y)/(d||1)*75;if(e.hp<=0)killEnemy(e);}}
+    for(const b of enemyBullets){if(Math.hypot(b.x-player.x,b.y-player.y)<260){b.dead=true;run.score+=8;}}
     burst(player.x,player.y,palette.gold,36,250); floater('TIDAL PULSE',player.x,player.y-35,palette.gold);
   }
 
@@ -411,10 +431,12 @@
     run.score += dt * (4 + run.wave);
 
     if (run.elapsed >= run.nextWave) {
+      const previousBiome=currentBiome().name;
       run.wave++;
       run.nextWave += 24;
       if(run.wave%5===0){run.bossSpawned=false;setTimeout(()=>state==='playing'&&spawnBoss(),900);}
       floater(`WAVE ${run.wave}`, W/2, H*.34, palette.gold);
+      if(currentBiome().name!==previousBiome)window.Shardwake?.toast?.(currentBiome().name,'aqua');
       haptic(12);
     }
 
@@ -451,6 +473,7 @@
     if (vm > 40) {
       const back = player.angle + Math.PI;
       particles.push({ x:player.x+Math.cos(back)*10, y:player.y+Math.sin(back)*10, vx:Math.cos(back)*rand(30,90)-player.vx*.18, vy:Math.sin(back)*rand(30,90)-player.vy*.18, life:rand(.12,.3), max:.3, size:rand(1.5,4), color:Math.random()<.6?palette.aqua:palette.blue, drag:.94 });
+      if(Math.random()<Math.min(1,dt*34))wakes.push({x:player.x-Math.cos(player.angle)*15,y:player.y-Math.sin(player.angle)*15,r:rand(3,7),life:.7,max:.7});
     }
 
     player.fireTimer -= dt;
@@ -501,13 +524,16 @@
       const dx=player.x-e.x, dy=player.y-e.y, d=Math.hypot(dx,dy)||1;
       let a = Math.atan2(dy,dx);
       if (e.type === 'spinner') a += Math.sin(e.wobble)*.65;
+      if(e.type==='seer'&&d<240)a+=Math.PI*.82;
+      if(e.boss){e.phase=e.hp/e.maxHp<.35?3:e.hp/e.maxHp<.7?2:1;a+=Math.sin(time*.75)*.5;}
       const sp = e.speed * (e.hit>0 ? .55 : 1);
       e.vx = lerp(e.vx,Math.cos(a)*sp,1-Math.exp(-2.6*dt));
       e.vy = lerp(e.vy,Math.sin(a)*sp,1-Math.exp(-2.6*dt));
       e.x += e.vx*dt; e.y += e.vy*dt;
       e.angle += (e.type==='spinner'?3.2:e.spin)*dt;
+      if(e.type==='seer'||e.boss){e.fireTimer-=dt;if(e.fireTimer<=0){enemyShoot(e,e.boss);e.fireTimer=e.boss?Math.max(.7,1.8-e.phase*.3):rand(1.7,2.5);}}
       if (d < player.radius+e.r) {
-        if (player.dashTime>0) { e.hp -= 999; killEnemy(e,true); }
+        if (player.dashTime>0) { e.hp -= e.boss?8:999; if(e.hp<=0)killEnemy(e,true); else {e.hit=.16;shake=Math.max(shake,6);} }
         else { damage(e.damage); e.x -= dx/d*22; e.y -= dy/d*22; }
       }
     }
@@ -525,6 +551,8 @@
       }
     }
     bullets = bullets.filter(b => !b.dead && b.life>0 && b.x>-30&&b.x<W+30&&b.y>-30&&b.y<H+30);
+    for(const b of enemyBullets){b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;b.a=(b.a||0)+dt*5;const d=Math.hypot(b.x-player.x,b.y-player.y);if(d<player.radius+b.r){if(player.dashTime>0){b.dead=true;run.score+=12;burst(b.x,b.y,palette.gold,5,55);}else{b.dead=true;damage(b.damage);}}else if(!b.grazed&&d<player.radius+b.r+18){b.grazed=true;run.score+=18;floater('GRAZE',b.x,b.y,palette.gold);}}
+    enemyBullets=enemyBullets.filter(b=>!b.dead&&b.life>0&&b.x>-50&&b.x<W+50&&b.y>-50&&b.y<H+50);
     enemies = enemies.filter(e => !e.dead && e.x>-100&&e.x<W+100&&e.y>-100&&e.y<H+100);
 
     for (const m of meteors) {
@@ -552,6 +580,7 @@
       }
     }
     powerups=powerups.filter(p=>p.life>0);
+    for(const w of wakes){w.r+=18*dt;w.life-=dt;}wakes=wakes.filter(w=>w.life>0);
 
     for (const p of particles) { p.x+=p.vx*dt; p.y+=p.vy*dt; p.vx*=p.drag; p.vy*=p.drag; p.life-=dt; }
     particles = particles.filter(p=>p.life>0);
@@ -578,7 +607,7 @@
     ui.xpFill.style.transform = `scaleX(${clamp(run.xp/run.xpNeed,0,1)})`;
     ui.dashRing.style.setProperty('--cooldown', `${player.dashCooldown/player.dashCooldownMax*360}deg`);
     ui.abilityRing.style.setProperty('--ability',`${player.abilityCooldown/player.abilityCooldownMax*360}deg`);
-    ui.objectiveHud.textContent=run.objective.toUpperCase();
+    ui.objectiveHud.textContent=`${currentBiome().name}  ·  ${run.objective.toUpperCase()}`;
     const boss=enemies.find(e=>e.boss);if(boss){ui.bossFill.style.transform=`scaleX(${clamp(boss.hp/boss.maxHp,0,1)})`;ui.bossBar.classList.remove('hidden');}else ui.bossBar.classList.add('hidden');
     if (run.combo >= 2 && run.comboTimer>0) { ui.combo.textContent=`x${run.combo}`; ui.combo.classList.remove('hidden'); }
     else ui.combo.classList.add('hidden');
@@ -600,15 +629,20 @@
   }
 
   function drawBackdrop() {
+    const biome=currentBiome();
     const g=ctx.createLinearGradient(0,0,0,H);
-    g.addColorStop(0,palette.sea1); g.addColorStop(.55,palette.sea2); g.addColorStop(1,palette.deep);
+    g.addColorStop(0,biome.top); g.addColorStop(.55,biome.mid); g.addColorStop(1,biome.bottom);
     ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
 
     ctx.save(); ctx.globalAlpha=.18;
     for(const f of seaFacets){
-      ctx.fillStyle=[palette.sea1,palette.sea2,palette.sea3][f.shade];
+      ctx.fillStyle=[biome.top,biome.mid,biome.bottom][f.shade];
       ctx.beginPath(); ctx.moveTo(f.x,f.y-f.s*.5); ctx.lineTo(f.x+f.s*.6,f.y); ctx.lineTo(f.x,f.y+f.s*.5); ctx.lineTo(f.x-f.s*.6,f.y); ctx.closePath(); ctx.fill();
     }
+    ctx.restore();
+
+    ctx.save();ctx.globalCompositeOperation='screen';ctx.globalAlpha=.055;ctx.strokeStyle=biome.accent;ctx.lineWidth=2;
+    for(let y=-30;y<H+40;y+=52){ctx.beginPath();for(let x=-20;x<W+30;x+=18){const yy=y+Math.sin(x*.035+time*1.2+y*.01)*9;x===-20?ctx.moveTo(x,yy):ctx.lineTo(x,yy);}ctx.stroke();}
     ctx.restore();
 
     for(const isl of islands) drawIsland(isl);
@@ -623,6 +657,9 @@
       ctx.stroke();
     }
     ctx.restore();
+
+    if(biome.weather==='storm'){ctx.save();ctx.strokeStyle='#d7ccff';ctx.lineWidth=1;for(const r of rain){const y=(r.y+time*r.speed)%H;ctx.globalAlpha=r.alpha;ctx.beginPath();ctx.moveTo(r.x,y);ctx.lineTo(r.x-4,y+r.l);ctx.stroke();}ctx.restore();}
+    if(biome.weather==='embers'){ctx.save();for(let i=0;i<24;i++){const x=(i*83+Math.sin(i*3.1)*41)%W,y=H-((time*(18+i%5*5)+i*97)%(H+40));ctx.globalAlpha=.12+(i%4)*.04;ctx.fillStyle=i%2?'#ff9a72':'#ffd46d';ctx.fillRect(x,y,2,2);}ctx.restore();}
   }
 
   function drawIsland(isl){
@@ -640,6 +677,8 @@
       ctx.fillStyle='#73a66d'; polygon(-isl.r*.18,-isl.r*.08,isl.r*.13,3,-.7);ctx.fill();
       ctx.fillStyle='#47745e';polygon(isl.r*.2,isl.r*.06,isl.r*.1,3,.2);ctx.fill();
     }
+    for(let i=0;i<isl.detail;i++){const a=i/isl.detail*TAU+isl.hue*4,r=isl.r*(.18+(i%2)*.22);ctx.fillStyle=i%2?'#86a98a':'#406c62';polygon(Math.cos(a)*r,Math.sin(a)*r,3+(i%3),3,a);ctx.fill();}
+    if(isl.crystal){ctx.shadowColor=currentBiome().accent;ctx.shadowBlur=8;ctx.fillStyle=currentBiome().accent;polygon(isl.r*.08,-isl.r*.12,6,4,Math.PI/4);ctx.fill();ctx.shadowBlur=0;}
     ctx.restore();
   }
 
@@ -679,13 +718,15 @@
 
   function drawEnemy(e){
     ctx.save();ctx.translate(e.x,e.y);ctx.rotate(e.angle);ctx.globalAlpha=e.hit>0?.6:1;
-    const c=e.type==='boss'?'#ff5470':e.type==='brute'?palette.coral:(e.type==='spinner'||e.type==='wraith')?'#bd75ff':'#5b91bd';
+    const c=e.type==='boss'?'#ff5470':e.type==='seer'?'#ffd46d':e.type==='brute'?palette.coral:(e.type==='spinner'||e.type==='wraith')?'#bd75ff':'#5b91bd';
     ctx.shadowColor=c;ctx.shadowBlur=e.hit>0?18:5;
     if(e.type==='boss'){
       ctx.fillStyle=c;polygon(0,0,e.r,8,time*.2);ctx.fill();ctx.fillStyle='#5a1732';polygon(0,0,e.r*.68,6,-time*.35);ctx.fill();ctx.fillStyle=palette.gold;polygon(0,0,10,4,Math.PI/4);ctx.fill();
     } else if(e.type==='hunter'){
       ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(0,-e.r*1.25);ctx.lineTo(e.r,e.r);ctx.lineTo(0,e.r*.45);ctx.lineTo(-e.r,e.r);ctx.closePath();ctx.fill();
       ctx.fillStyle='#17384b';ctx.beginPath();ctx.moveTo(0,-e.r*1.25);ctx.lineTo(0,e.r*.45);ctx.lineTo(-e.r,e.r);ctx.closePath();ctx.fill();
+    } else if(e.type==='seer'){
+      ctx.strokeStyle=c;ctx.lineWidth=4;polygon(0,0,e.r,4,time*.4);ctx.stroke();ctx.fillStyle='#fff2b8';ctx.beginPath();ctx.arc(0,0,e.r*.38,0,TAU);ctx.fill();ctx.fillStyle='#503d24';ctx.beginPath();ctx.arc(Math.cos(e.angle)*2,Math.sin(e.angle)*2,e.r*.17,0,TAU);ctx.fill();
     } else if(e.type==='spinner'){
       ctx.fillStyle=c;for(let i=0;i<3;i++){ctx.rotate(TAU/3);ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(e.r*.4,-e.r*1.4);ctx.lineTo(-e.r*.4,-e.r*.85);ctx.closePath();ctx.fill();}
       ctx.fillStyle='#f2d8ff';polygon(0,0,e.r*.42,6,time);ctx.fill();
@@ -718,16 +759,19 @@
 
     if(state==='menu') drawMenuScene();
     else if(player){
+      for(const w of wakes){ctx.save();ctx.globalAlpha=clamp(w.life/w.max,0,1)*.25;ctx.strokeStyle=palette.aqua;ctx.lineWidth=2;ctx.beginPath();ctx.arc(w.x,w.y,w.r,0,TAU);ctx.stroke();ctx.restore();}
       for(const m of meteors) drawMeteor(m);
       for(const s of shards) drawShard(s);
       for(const p of powerups){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.a);ctx.shadowColor=palette.gold;ctx.shadowBlur=18;ctx.fillStyle=p.type==='repair'?palette.aqua:p.type==='shield'?palette.blue:palette.gold;polygon(0,0,p.r,6,Math.PI/6);ctx.fill();ctx.fillStyle=palette.white;polygon(0,0,4,4,Math.PI/4);ctx.fill();ctx.restore();}
       for(const b of bullets){ctx.save();ctx.shadowColor=palette.aqua;ctx.shadowBlur=10;ctx.fillStyle=palette.white;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,TAU);ctx.fill();ctx.restore();}
+      for(const b of enemyBullets){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.a);ctx.shadowColor=b.phase?'#ff5470':'#ffd46d';ctx.shadowBlur=14;ctx.fillStyle=b.phase?'#ff8b9b':'#ffe39a';polygon(0,0,b.r,4,Math.PI/4);ctx.fill();ctx.restore();}
       for(const e of enemies) drawEnemy(e);
       drawPlayer();
       for(const p of particles){ctx.save();ctx.globalAlpha=clamp(p.life/p.max,0,1);ctx.fillStyle=p.color;polygon(p.x,p.y,p.size,Math.random()<.5?3:4,p.life*3);ctx.fill();ctx.restore();}
       for(const f of floaters){ctx.save();ctx.globalAlpha=clamp(f.life/f.max,0,1);ctx.fillStyle=f.color;ctx.font='900 14px ui-rounded, sans-serif';ctx.textAlign='center';ctx.shadowColor='rgba(0,0,0,.5)';ctx.shadowBlur=5;ctx.fillText(f.text,f.x,f.y);ctx.restore();}
     }
     ctx.restore();
+    const vignette=ctx.createRadialGradient(W/2,H*.48,Math.min(W,H)*.18,W/2,H*.48,Math.max(W,H)*.7);vignette.addColorStop(0,'rgba(0,0,0,0)');vignette.addColorStop(1,'rgba(0,4,12,.52)');ctx.fillStyle=vignette;ctx.fillRect(0,0,W,H);
     if(flash>0){ctx.fillStyle=`rgba(255,220,220,${flash*.55})`;ctx.fillRect(0,0,W,H);}
   }
 
