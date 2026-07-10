@@ -1,0 +1,11 @@
+{
+  "name": "Shardwake",
+  "short_name": "Shardwake",
+  "description": "A low-poly survival run across a fractured sea.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#06111c",
+  "theme_color": "#08131f"
+}
