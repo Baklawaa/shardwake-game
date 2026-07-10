@@ -11,4 +11,10 @@ A mobile-first, low-poly survival game built with the Canvas 2D API and no exter
 - `meta.js` — hangar, missions, settings and menu interactions
 - `manifest.json` / `sw.js` — installable, offline-capable PWA
 
+## Game systems
+
+The game includes persistent core upgrades, claimable daily missions, achievements,
+five wake signatures, three procedural biomes, weather, ranged enemies, hostile
+projectiles with a graze mechanic, relic drops, and a three-phase Leviathan boss.
+
 Serve the folder over HTTP for local development. GitHub Pages deploys `main` automatically.
