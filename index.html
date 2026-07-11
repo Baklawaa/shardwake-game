@@ -27,7 +27,6 @@
         <div class="meter health"><i id="healthFill"></i></div>
         <div class="meter xp"><i id="xpFill"></i></div>
       </div>
-      <div id="objectiveHud" class="objective-hud">SURVIVE THE CURRENT</div>
       <div id="combo" class="combo hidden">x2</div>
       <div id="bossBar" class="boss-bar hidden"><span>ABYSSAL LEVIATHAN</span><div><i id="bossFill"></i></div></div>
     </section>
@@ -79,13 +78,8 @@
     </section>
 
     <section id="codex" class="panel modal meta-panel hidden">
-      <p class="eyebrow">FIELD ARCHIVE</p><h2>CODEX</h2>
-      <div class="codex-grid">
-        <article><b>HUNTER</b><span>Fast pursuit craft</span></article><article><b>SPINNER</b><span>Unstable interceptor</span></article>
-        <article><b>BRUTE</b><span>Armoured rammer</span></article><article><b>WRAITH</b><span>Phasing predator</span></article>
-        <article><b>SEER</b><span>Long-range artillery</span></article><article><b>LEVIATHAN</b><span>Three-phase abyss boss</span></article>
-        <article><b>BIOMES</b><span>Sea changes every 3 waves</span></article><article><b>RELICS</b><span>Temporary abilities</span></article>
-      </div>
+      <p class="eyebrow">FIELD ARCHIVE</p><h2>CODEX <small id="codexProgress">0/6</small></h2>
+      <div id="codexGrid" class="codex-grid"></div>
       <button class="secondary close-meta">BACK</button>
     </section>
 
@@ -110,11 +104,10 @@
     </section>
 
     <section id="gameover" class="panel modal hidden">
-      <p class="eyebrow">THE SEA CLAIMED YOU</p><h2>RUN OVER</h2>
+      <p class="eyebrow">VOYAGE COMPLETE</p>
       <div class="final-score"><span>SCORE</span><strong id="finalScore">0</strong></div>
-      <div class="stats"><span>Wave <b id="finalWave">1</b></span><span>Shards <b id="finalShards">0</b></span><span>Kills <b id="finalKills">0</b></span></div>
-      <div id="runRewards" class="run-rewards"></div>
-      <button id="againBtn" class="primary">FLY AGAIN</button><button id="menuBtn" class="secondary">MAIN MENU</button>
+      <p id="finalSummary" class="final-summary">WAVE 1 · +0 ◆</p>
+      <button id="againBtn" class="primary">AGAIN</button><button id="menuBtn" class="text-btn compact-exit">MAIN MENU</button>
     </section>
 
     <div id="toastLayer" class="toast-layer" aria-live="polite"></div>
