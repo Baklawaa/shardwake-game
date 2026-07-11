@@ -61,6 +61,8 @@
   let powerups = [];
   let floaters = [];
   let wakes = [];
+  let shockwaves = [];
+  let afterimages = [];
   let rain = [];
   let run;
   const biomes=[
@@ -127,7 +129,7 @@
 
   function resetGame() {
     time = 0; shake = 0; flash = 0;
-    shards = []; enemies = []; bullets = []; enemyBullets = []; particles = []; meteors = []; powerups = []; wakes=[]; floaters = [];
+    shards = []; enemies = []; bullets = []; enemyBullets = []; particles = []; meteors = []; powerups = []; wakes=[]; shockwaves=[]; afterimages=[]; floaters = [];
     run = {
       elapsed: 0, score: 0, wave: 1, level: 1, xp: 0, xpNeed: 8, collected: 0,
       enemyTimer: 3.8, shardTimer: .15, meteorTimer: 10, combo: 0, comboTimer: 0, introTimer:3.45,
@@ -142,7 +144,7 @@
       invuln: 0, dashTime: 0, dashCooldown: 0, dashCooldownMax: 3.3, dashPower: 680,
       magnet: 75+(perks.magnet||0)*8, fireTimer: .35, fireRate: .78*(1-(perks.cannon||0)*.04), bulletDamage: 1, bulletSpeed: 500,
       shield: 0, pickupValue: 1, multishot: 1, pierce: 0, drone: 0, droneTimer: 0,
-      abilityCooldown:0, abilityCooldownMax:12, overdrive:0
+      abilityCooldown:0, abilityCooldownMax:12, overdrive:0, afterimageTimer:0
     };
     buildBackdrop();
     for (let i = 0; i < 8; i++) spawnShard(true);
@@ -266,7 +268,8 @@
     player.abilityCooldown=player.abilityCooldownMax; shake=Math.max(shake,8); haptic([12,25,12]); audio.level();
     for(const e of enemies){const d=Math.hypot(e.x-player.x,e.y-player.y);if(d<220){e.hp-=4+Math.floor(run.level/3);e.x+=(e.x-player.x)/(d||1)*75;e.y+=(e.y-player.y)/(d||1)*75;if(e.hp<=0)killEnemy(e);}}
     for(const b of enemyBullets){if(Math.hypot(b.x-player.x,b.y-player.y)<260){b.dead=true;run.score+=8;}}
-    burst(player.x,player.y,palette.gold,36,250); floater('TIDAL PULSE',player.x,player.y-35,palette.gold);
+    for(let i=0;i<3;i++)shockwaves.push({kind:'pulse',x:player.x,y:player.y,r:10,maxR:245+i*18,life:.78,max:.78,delay:i*.09,color:i===1?palette.aqua:palette.gold,sides:12});
+    burst(player.x,player.y,palette.gold,46,290); floater('TIDAL PULSE',player.x,player.y-35,palette.gold);
   }
 
   function spawnMeteor() {
@@ -302,7 +305,9 @@
     const m = Math.hypot(dx,dy) || 1;
     player.vx = dx / m * player.dashPower;
     player.vy = dy / m * player.dashPower;
-    for (let i = 0; i < 18; i++) particles.push({ x: player.x, y: player.y, vx: rand(-90,90) - dx * rand(80,250), vy: rand(-90,90) - dy * rand(80,250), life: rand(.25,.65), max: .65, size: rand(2,6), color: i % 3 ? palette.aqua : palette.blue, drag: .94 });
+    shockwaves.push({kind:'dash',x:player.x,y:player.y,r:5,maxR:72,life:.38,max:.38,delay:0,color:palette.aqua,sides:8,angle:Math.atan2(dy,dx)});
+    afterimages.push({x:player.x,y:player.y,angle:player.angle,life:.3,max:.3});
+    for (let i = 0; i < 30; i++) particles.push({ x: player.x, y: player.y, vx: rand(-75,75) - dx * rand(160,430), vy: rand(-75,75) - dy * rand(160,430), life: rand(.18,.52), max: .52, size: rand(1.5,5), color: i % 4 ? palette.aqua : palette.gold, drag: .91 });
   }
 
   function damage(amount) {
@@ -434,6 +439,8 @@
     player.dashCooldown = Math.max(0, player.dashCooldown - dt);
     player.abilityCooldown = Math.max(0,player.abilityCooldown-dt);
     player.overdrive = Math.max(0,player.overdrive-dt);
+    player.afterimageTimer-=dt;
+    if(player.dashTime>0&&player.afterimageTimer<=0){player.afterimageTimer=.035;afterimages.push({x:player.x,y:player.y,angle:player.angle,life:.26,max:.26});}
 
     let ix = input.x, iy = input.y;
     const im = Math.hypot(ix,iy);
@@ -567,6 +574,8 @@
     }
     powerups=powerups.filter(p=>p.life>0);
     for(const w of wakes){w.r+=18*dt;w.life-=dt;}wakes=wakes.filter(w=>w.life>0);
+    for(const fx of shockwaves){if(fx.delay>0){fx.delay-=dt;continue;}fx.life-=dt;fx.r=lerp(fx.r,fx.maxR,1-Math.exp(-8*dt));}shockwaves=shockwaves.filter(fx=>fx.life>0);
+    for(const a of afterimages)a.life-=dt;afterimages=afterimages.filter(a=>a.life>0);
 
     for (const p of particles) { p.x+=p.vx*dt; p.y+=p.vy*dt; p.vx*=p.drag; p.vy*=p.drag; p.life-=dt; }
     particles = particles.filter(p=>p.life>0);
@@ -661,6 +670,26 @@
     }
   }
 
+  function drawAfterimage(a){
+    const alpha=clamp(a.life/a.max,0,1);
+    ctx.save();ctx.translate(a.x,a.y);ctx.rotate(a.angle+Math.PI/2);ctx.globalAlpha=alpha*.34;ctx.globalCompositeOperation='lighter';ctx.shadowColor=palette.aqua;ctx.shadowBlur=20;
+    if(shipArt.complete&&shipArt.naturalWidth){ctx.filter='brightness(1.8) saturate(1.6)';ctx.drawImage(shipArt,-34,-42,68,84);}else{ctx.fillStyle=palette.aqua;polygon(0,0,22,3,-Math.PI/2);ctx.fill();}
+    ctx.restore();
+  }
+
+  function drawShockwave(fx){
+    if(fx.delay>0)return;const alpha=clamp(fx.life/fx.max,0,1),progress=1-alpha;
+    ctx.save();ctx.translate(fx.x,fx.y);ctx.globalCompositeOperation='lighter';ctx.globalAlpha=alpha;ctx.strokeStyle=fx.color;ctx.shadowColor=fx.color;ctx.shadowBlur=18;
+    if(fx.kind==='pulse'){
+      const glow=ctx.createRadialGradient(0,0,0,0,0,fx.r);glow.addColorStop(0,`rgba(255,211,107,${.09*alpha})`);glow.addColorStop(.72,'rgba(53,214,199,.03)');glow.addColorStop(1,'rgba(53,214,199,0)');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(0,0,fx.r,0,TAU);ctx.fill();
+      ctx.lineWidth=2+alpha*5;ctx.setLineDash([18,7]);ctx.lineDashOffset=-progress*60;polygon(0,0,fx.r,fx.sides,time*.22);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=alpha*.55;ctx.lineWidth=1;polygon(0,0,fx.r*.82,6,-time*.35);ctx.stroke();
+    }else{
+      ctx.rotate(fx.angle);ctx.lineWidth=3;polygon(0,0,fx.r,fx.sides,Math.PI/8);ctx.stroke();ctx.lineWidth=2;
+      for(let i=-2;i<=2;i++){ctx.globalAlpha=alpha*(1-Math.abs(i)*.14);ctx.beginPath();ctx.moveTo(-10,i*7);ctx.lineTo(-35-progress*75,i*14);ctx.stroke();}
+    }
+    ctx.restore();
+  }
+
   function drawEnemy(e){
     ctx.save();ctx.translate(e.x,e.y);ctx.rotate(e.angle);ctx.globalAlpha=e.hit>0?.6:1;
     const c=e.type==='boss'?'#ff5470':e.type==='seer'?'#ffd46d':e.type==='brute'?palette.coral:(e.type==='spinner'||e.type==='wraith')?'#bd75ff':'#5b91bd';
@@ -705,12 +734,14 @@
     if(state==='menu') drawMenuScene();
     else if(player){
       for(const w of wakes){ctx.save();ctx.globalAlpha=clamp(w.life/w.max,0,1)*.25;ctx.strokeStyle=palette.aqua;ctx.lineWidth=2;ctx.beginPath();ctx.arc(w.x,w.y,w.r,0,TAU);ctx.stroke();ctx.restore();}
+      for(const a of afterimages)drawAfterimage(a);
       for(const m of meteors) drawMeteor(m);
       for(const s of shards) drawShard(s);
       for(const p of powerups){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.a);ctx.shadowColor=palette.gold;ctx.shadowBlur=18;ctx.fillStyle=p.type==='repair'?palette.aqua:p.type==='shield'?palette.blue:palette.gold;polygon(0,0,p.r,6,Math.PI/6);ctx.fill();ctx.fillStyle=palette.white;polygon(0,0,4,4,Math.PI/4);ctx.fill();ctx.restore();}
       for(const b of bullets){ctx.save();ctx.shadowColor=palette.aqua;ctx.shadowBlur=10;ctx.fillStyle=palette.white;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,TAU);ctx.fill();ctx.restore();}
       for(const b of enemyBullets){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.a);ctx.shadowColor=b.phase?'#ff5470':'#ffd46d';ctx.shadowBlur=14;ctx.fillStyle=b.phase?'#ff8b9b':'#ffe39a';polygon(0,0,b.r,4,Math.PI/4);ctx.fill();ctx.restore();}
       for(const e of enemies) drawEnemy(e);
+      for(const fx of shockwaves)drawShockwave(fx);
       drawPlayer();
       for(const p of particles){ctx.save();ctx.globalAlpha=clamp(p.life/p.max,0,1);ctx.fillStyle=p.color;polygon(p.x,p.y,p.size,Math.random()<.5?3:4,p.life*3);ctx.fill();ctx.restore();}
       for(const f of floaters){ctx.save();ctx.globalAlpha=clamp(f.life/f.max,0,1);ctx.fillStyle=f.color;ctx.font='900 14px ui-rounded, sans-serif';ctx.textAlign='center';ctx.shadowColor='rgba(0,0,0,.5)';ctx.shadowBlur=5;ctx.fillText(f.text,f.x,f.y);ctx.restore();}
