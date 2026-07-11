@@ -11,9 +11,9 @@
   const ui = {
     hud: $('hud'), start: $('start'), how: $('how'), hangar:$('hangar'), missions:$('missions'), codex:$('codex'), settings:$('settings'), pause: $('pause'), upgrade: $('upgrade'), gameover: $('gameover'), controls: $('controls'),
     score: $('score'), wave: $('wave'), healthFill: $('healthFill'), xpFill: $('xpFill'), combo: $('combo'), dashRing: $('dashRing'),
-    bestScore: $('bestScore'), finalScore: $('finalScore'), finalWave: $('finalWave'), finalShards: $('finalShards'), finalKills:$('finalKills'), runRewards:$('runRewards'), upgradeCards: $('upgradeCards'),
+    bestScore: $('bestScore'), finalScore: $('finalScore'), finalSummary:$('finalSummary'), upgradeCards: $('upgradeCards'),
     playBtn: $('playBtn'), howBtn: $('howBtn'), howClose: $('howClose'), pauseBtn: $('pauseBtn'), resumeBtn: $('resumeBtn'), restartBtn: $('restartBtn'),
-    againBtn: $('againBtn'), menuBtn: $('menuBtn'), quitBtn:$('quitBtn'), dashBtn: $('dashBtn'), abilityBtn:$('abilityBtn'), abilityLabel:$('abilityLabel'), abilityRing:$('abilityRing'), bossBar:$('bossBar'), bossFill:$('bossFill'), objectiveHud:$('objectiveHud'), stickZone: $('stickZone'), stickBase: $('stickBase'), stickKnob: $('stickKnob')
+    againBtn: $('againBtn'), menuBtn: $('menuBtn'), quitBtn:$('quitBtn'), dashBtn: $('dashBtn'), abilityBtn:$('abilityBtn'), abilityLabel:$('abilityLabel'), abilityRing:$('abilityRing'), bossBar:$('bossBar'), bossFill:$('bossFill'), stickZone: $('stickZone'), stickBase: $('stickBase'), stickKnob: $('stickKnob')
   };
 
   const TAU = Math.PI * 2;
@@ -115,8 +115,8 @@
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     buildBackdrop();
     if (player) {
-      player.x = clamp(player.x, 30, W - 30);
-      player.y = clamp(player.y, 70, H - 80);
+      player.x = clamp(player.x, 20, W - 20);
+      player.y = clamp(player.y, 20, H - 20);
     }
   }
 
@@ -147,15 +147,15 @@
     shards = []; enemies = []; bullets = []; enemyBullets = []; particles = []; meteors = []; powerups = []; wakes=[]; floaters = [];
     run = {
       elapsed: 0, score: 0, wave: 1, level: 1, xp: 0, xpNeed: 8, collected: 0,
-      enemyTimer: .6, shardTimer: .15, meteorTimer: 10, combo: 0, comboTimer: 0,
+      enemyTimer: 3.8, shardTimer: .15, meteorTimer: 10, combo: 0, comboTimer: 0, introTimer:3.45,
       nextWave: 24, pendingLevel: false, kills:0, dashes:0, bosses:0, damageTaken:0,
       bossWave:0, bossSpawned:false, objective:'Collect shards and survive'
     };
     const rank = window.Shardwake?.profile?.level || 1;
     const perks=window.Shardwake?.profile?.perks||{};
     player = {
-      x: W / 2, y: H * .68, vx: 0, vy: 0, angle: -Math.PI / 2, radius: 15,
-      hp: 100 + Math.min(30,rank*2)+(perks.hull||0)*6, maxHp: 100 + Math.min(30,rank*2)+(perks.hull||0)*6, speed: (235 + Math.min(20,rank))*(1+(perks.engine||0)*.03), accel: 7.5,
+      x: W / 2, y: H * .58, vx: 0, vy: 0, angle: -Math.PI / 2, radius: 15,
+      hp: 100 + Math.min(30,rank*2)+(perks.hull||0)*6, maxHp: 100 + Math.min(30,rank*2)+(perks.hull||0)*6, speed: (255 + Math.min(22,rank))*(1+(perks.engine||0)*.03), accel: 10.5,
       invuln: 0, dashTime: 0, dashCooldown: 0, dashCooldownMax: 3.3, dashPower: 680,
       magnet: 75+(perks.magnet||0)*8, fireTimer: .35, fireRate: .78*(1-(perks.cannon||0)*.04), bulletDamage: 1, bulletSpeed: 500,
       shield: 0, pickupValue: 1, multishot: 1, pierce: 0, drone: 0, droneTimer: 0,
@@ -214,11 +214,8 @@
       storage.set('shardwake-best', String(best));
     }
     ui.finalScore.textContent = Math.floor(run.score).toLocaleString();
-    ui.finalWave.textContent = run.wave;
-    ui.finalShards.textContent = run.collected;
-    ui.finalKills.textContent = run.kills;
     const rewards = window.Shardwake?.addRun?.({score:Math.floor(run.score),wave:run.wave,shards:run.collected,kills:run.kills,dashes:run.dashes,bosses:run.bosses});
-    ui.runRewards.textContent = rewards ? `+${rewards.reward} ◆   +${rewards.xp} RANK XP` : '';
+    ui.finalSummary.textContent=`WAVE ${run.wave}  ·  ${run.kills} KILLS${rewards?`  ·  +${rewards.reward} ◆`:''}`;
     ui.controls.classList.add('hidden');
     setTimeout(() => showOnly('gameover'), 350);
   }
@@ -250,6 +247,7 @@
     if (run.wave >= 4 && roll > .88) type = 'brute';
     if (run.wave >= 7 && roll > .95) type = 'wraith';
     if (run.wave >= 3 && roll > .82 && roll < .9) type = 'seer';
+    window.Shardwake?.discover?.(type);
     const data = {
       hunter: { r: 14, speed: rand(68, 88) + run.wave * 4, hp: 2 + Math.floor(run.wave / 4), damage: 18, score: 55 },
       spinner: { r: 18, speed: rand(48, 62) + run.wave * 3, hp: 4 + Math.floor(run.wave / 3), damage: 24, score: 95 },
@@ -264,6 +262,7 @@
   function spawnBoss(){
     const hp=Math.round((65+run.wave*14)*difficulty());
     enemies.push({x:W/2,y:-70,vx:0,vy:0,angle:0,spin:.5,type:'boss',hit:0,dead:false,r:48,speed:32+run.wave,damage:42,score:1800,hp,maxHp:hp,wobble:0,boss:true,fireTimer:1.6,phase:1});
+    window.Shardwake?.discover?.('leviathan');
     run.bossSpawned=true; run.objective='Destroy the Abyssal Leviathan'; ui.bossBar.classList.remove('hidden');
     window.Shardwake?.toast?.('LEVIATHAN AWAKENED','coral'); haptic([30,50,30]);
   }
@@ -431,6 +430,7 @@
     time += dt;
     if (state !== 'playing') return;
     run.elapsed += dt;
+    run.introTimer=Math.max(0,run.introTimer-dt);
     run.score += dt * (4 + run.wave);
 
     if (run.elapsed >= run.nextWave) {
@@ -467,11 +467,11 @@
     if (vm > 15) player.angle = lerpAngle(player.angle, Math.atan2(player.vy, player.vx), 1 - Math.exp(-9*dt));
     player.x += player.vx * dt;
     player.y += player.vy * dt;
-    const margin = 22;
-    if (player.x < margin || player.x > W-margin) player.vx *= -.28;
-    if (player.y < 82 || player.y > H-60) player.vy *= -.28;
+    const margin = player.radius + 3;
+    if (player.x < margin || player.x > W-margin) player.vx *= .15;
+    if (player.y < margin || player.y > H-margin) player.vy *= .15;
     player.x = clamp(player.x, margin, W-margin);
-    player.y = clamp(player.y, 82, H-60);
+    player.y = clamp(player.y, margin, H-margin);
 
     if (vm > 40) {
       const back = player.angle + Math.PI;
@@ -610,7 +610,6 @@
     ui.xpFill.style.transform = `scaleX(${clamp(run.xp/run.xpNeed,0,1)})`;
     ui.dashRing.style.setProperty('--cooldown', `${player.dashCooldown/player.dashCooldownMax*360}deg`);
     ui.abilityRing.style.setProperty('--ability',`${player.abilityCooldown/player.abilityCooldownMax*360}deg`);
-    ui.objectiveHud.textContent=`${currentBiome().name}  ·  ${run.objective.toUpperCase()}`;
     const boss=enemies.find(e=>e.boss);if(boss){ui.bossFill.style.transform=`scaleX(${clamp(boss.hp/boss.maxHp,0,1)})`;ui.bossBar.classList.remove('hidden');}else ui.bossBar.classList.add('hidden');
     if (run.combo >= 2 && run.comboTimer>0) { ui.combo.textContent=`x${run.combo}`; ui.combo.classList.remove('hidden'); }
     else ui.combo.classList.add('hidden');
@@ -639,10 +638,15 @@
 
     if(backgroundArt.complete&&backgroundArt.naturalWidth){
       const scale=Math.max(W/backgroundArt.naturalWidth,H/backgroundArt.naturalHeight),dw=backgroundArt.naturalWidth*scale,dh=backgroundArt.naturalHeight*scale;
-      ctx.save();ctx.globalAlpha=biome.weather==='storm'?.62:biome.weather==='embers'?.48:.68;ctx.globalCompositeOperation='soft-light';ctx.drawImage(backgroundArt,(W-dw)/2,(H-dh)/2,dw,dh);ctx.restore();
+      ctx.save();ctx.globalAlpha=biome.weather==='storm'?.84:biome.weather==='embers'?.76:.9;ctx.globalCompositeOperation='source-over';ctx.drawImage(backgroundArt,(W-dw)/2,(H-dh)/2,dw,dh);ctx.restore();
     }
 
-    ctx.save(); ctx.globalAlpha=.18;
+    if(run?.introTimer>0&&state==='playing'){
+      const total=3.45,elapsed=total-run.introTimer,fadeIn=clamp(elapsed/.65,0,1),fadeOut=clamp(run.introTimer/.85,0,1),alpha=fadeIn*fadeOut,scale=.92+fadeIn*.08;
+      ctx.save();ctx.translate(W/2,H*.43);ctx.scale(scale,scale);ctx.globalAlpha=alpha*.64;ctx.textAlign='center';ctx.shadowColor='#64f0da';ctx.shadowBlur=24;ctx.fillStyle='#dffeff';ctx.font=`1000 ${clamp(W*.075,24,52)}px ui-rounded, sans-serif`;ctx.fillText('ENTER THE FRACTURED SEA',0,0);ctx.shadowBlur=0;ctx.globalAlpha=alpha*.48;ctx.fillStyle=currentBiome().accent;ctx.font='900 10px ui-rounded, sans-serif';ctx.letterSpacing='4px';ctx.fillText('HARVEST  ·  EVOLVE  ·  SURVIVE',0,26);ctx.restore();
+    }
+
+    ctx.save(); ctx.globalAlpha=.07;
     for(const f of seaFacets){
       ctx.fillStyle=[biome.top,biome.mid,biome.bottom][f.shade];
       ctx.beginPath(); ctx.moveTo(f.x,f.y-f.s*.5); ctx.lineTo(f.x+f.s*.6,f.y); ctx.lineTo(f.x,f.y+f.s*.5); ctx.lineTo(f.x-f.s*.6,f.y); ctx.closePath(); ctx.fill();
@@ -801,7 +805,7 @@
     if(state!=='playing'||input.active)return;
     audio.ensure();
     const p=pointerPos(e);input.active=true;input.pointerId=e.pointerId;input.ox=p.x;input.oy=p.y;
-    const size=110,zoneWidth=W>H?W*.45:W*.62;ui.stickBase.style.left=`${clamp(p.x-size/2,18,zoneWidth-size-6)}px`;ui.stickBase.style.bottom='auto';ui.stickBase.style.top=`${clamp(p.y-size/2,72,H-size-20)}px`;
+    const size=110,zoneWidth=W>H?W*.6:W*.78;ui.stickBase.style.left=`${clamp(p.x-size/2,18,zoneWidth-size-6)}px`;ui.stickBase.style.bottom='auto';ui.stickBase.style.top=`${clamp(p.y-size/2,60,H-size-20)}px`;
     updateStick(e);
     ui.stickZone.setPointerCapture?.(e.pointerId);
   }
