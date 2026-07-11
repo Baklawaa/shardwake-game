@@ -5,7 +5,7 @@
   const defaults = {
     version: 2, level: 1, xp: 0, currency: 0, totalRuns: 0, totalKills: 0,
     totalShards: 0, totalDashes: 0, bosses: 0, selectedSkin: 'aqua',
-    unlockedSkins: ['aqua'], claimed: [], perks: { hull:0, engine:0, magnet:0, cannon:0 },
+    unlockedSkins: ['aqua'], claimed: [], discovered: [], perks: { hull:0, engine:0, magnet:0, cannon:0 },
     settings: { difficulty: 'normal', sound: true, haptics: true, shake: true, contrast: false },
     missions: {}
   };
@@ -48,6 +48,11 @@
     const cost=20+(level*level+level)*12;
     if(p.currency<cost){api.toast('NOT ENOUGH SHARDS','coral');return false;}
     p.currency-=cost;p.perks[id]=level+1;api.save();api.toast(`${id.toUpperCase()} CORE MK ${level+1}`,'gold');api.emit('profile');return true;
+  };
+
+  api.discover = id => {
+    if(api.profile.discovered.includes(id))return false;
+    api.profile.discovered.push(id);api.save();api.toast(`CODEX UPDATED · ${id.toUpperCase()}`,'aqua');api.emit('discovery',{id});return true;
   };
 
   api.achievements = [
