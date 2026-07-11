@@ -35,7 +35,7 @@
     const p=S.profile;
     $('profileLevel').textContent=p.level; $('profileCurrency').textContent=p.currency;
     $('hangarStats').innerHTML=`<span>RANK<b>${p.level}</b></span><span>RUNS<b>${p.totalRuns}</b></span><span>KILLS<b>${p.totalKills}</b></span><span>BOSSES<b>${p.bosses}</b></span>`;
-    $('shipPreview').style.color=skins.find(x=>x.id===p.selectedSkin)?.color;
+    $('shipPreview').style.setProperty('--ship-glow',skins.find(x=>x.id===p.selectedSkin)?.color||'#64f0da');
     renderCores(); renderSkins(); renderMissions(); renderCodex();
   }
 
