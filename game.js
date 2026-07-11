@@ -6,6 +6,9 @@
   const backgroundArt = new Image();
   backgroundArt.decoding = 'async';
   backgroundArt.src = 'assets/shardwake-ocean.webp';
+  const shipArt = new Image();
+  shipArt.decoding = 'async';
+  shipArt.src = 'assets/shardwake-ship.png';
   const $ = id => document.getElementById(id);
 
   const ui = {
@@ -57,8 +60,6 @@
   let meteors = [];
   let powerups = [];
   let floaters = [];
-  let islands = [];
-  let seaFacets = [];
   let wakes = [];
   let rain = [];
   let run;
@@ -121,25 +122,7 @@
   }
 
   function buildBackdrop() {
-    seaFacets = [];
-    const cell = Math.max(75, Math.min(120, W / 4));
-    for (let y = -cell; y < H + cell; y += cell) {
-      for (let x = -cell; x < W + cell; x += cell) {
-        seaFacets.push({ x: x + rand(-25,25), y: y + rand(-25,25), s: cell * rand(.75,1.3), shade: Math.floor(rand(0,3)), drift: rand(3,10) });
-      }
-    }
-    islands = Array.from({ length: Math.max(5, Math.round(H / 145)) }, (_, i) => makeIsland(rand(-20, W + 20), i * (H / 5) + rand(-80, 80), rand(26, 62)));
     rain=Array.from({length:Math.min(55,Math.round(W*H/9000))},()=>({x:rand(0,W),y:rand(0,H),l:rand(8,25),speed:rand(380,720),alpha:rand(.08,.3)}));
-  }
-
-  function makeIsland(x, y, r) {
-    const n = Math.floor(rand(6, 10));
-    const pts = [];
-    for (let i = 0; i < n; i++) {
-      const a = i / n * TAU;
-      pts.push({ a, r: r * rand(.72, 1.15) });
-    }
-    return { x, y, r, pts, speed: rand(8, 18), spin: rand(-.03, .03), angle: rand(0, TAU), hue: Math.random(), detail:Math.floor(rand(2,6)), crystal:Math.random()<.34 };
   }
 
   function resetGame() {
@@ -154,7 +137,7 @@
     const rank = window.Shardwake?.profile?.level || 1;
     const perks=window.Shardwake?.profile?.perks||{};
     player = {
-      x: W / 2, y: H * .58, vx: 0, vy: 0, angle: -Math.PI / 2, radius: 15,
+      x: W / 2, y: H * .58, vx: 0, vy: 0, angle: -Math.PI / 2, radius: 19,
       hp: 100 + Math.min(30,rank*2)+(perks.hull||0)*6, maxHp: 100 + Math.min(30,rank*2)+(perks.hull||0)*6, speed: (255 + Math.min(22,rank))*(1+(perks.engine||0)*.03), accel: 10.5,
       invuln: 0, dashTime: 0, dashCooldown: 0, dashCooldownMax: 3.3, dashPower: 680,
       magnet: 75+(perks.magnet||0)*8, fireTimer: .35, fireRate: .78*(1-(perks.cannon||0)*.04), bulletDamage: 1, bulletSpeed: 500,
@@ -590,12 +573,6 @@
     for (const f of floaters) { f.y-=28*dt; f.life-=dt; }
     floaters=floaters.filter(f=>f.life>0);
 
-    for (const i of islands) {
-      i.y += i.speed*dt; i.angle += i.spin*dt;
-      if (i.y-i.r>H+80) { i.y=-i.r-80; i.x=rand(-20,W+20); }
-    }
-    for (const f of seaFacets) { f.y += f.drift*dt; if (f.y>H+f.s) f.y=-f.s; }
-
     shake *= Math.pow(.025,dt);
     flash = Math.max(0,flash-dt);
     updateHud();
@@ -646,52 +623,8 @@
       ctx.save();ctx.translate(W/2,H*.43);ctx.scale(scale,scale);ctx.globalAlpha=alpha*.64;ctx.textAlign='center';ctx.shadowColor='#64f0da';ctx.shadowBlur=24;ctx.fillStyle='#dffeff';ctx.font=`1000 ${clamp(W*.075,24,52)}px ui-rounded, sans-serif`;ctx.fillText('ENTER THE FRACTURED SEA',0,0);ctx.shadowBlur=0;ctx.globalAlpha=alpha*.48;ctx.fillStyle=currentBiome().accent;ctx.font='900 10px ui-rounded, sans-serif';ctx.letterSpacing='4px';ctx.fillText('HARVEST  ·  EVOLVE  ·  SURVIVE',0,26);ctx.restore();
     }
 
-    ctx.save(); ctx.globalAlpha=.07;
-    for(const f of seaFacets){
-      ctx.fillStyle=[biome.top,biome.mid,biome.bottom][f.shade];
-      ctx.beginPath(); ctx.moveTo(f.x,f.y-f.s*.5); ctx.lineTo(f.x+f.s*.6,f.y); ctx.lineTo(f.x,f.y+f.s*.5); ctx.lineTo(f.x-f.s*.6,f.y); ctx.closePath(); ctx.fill();
-    }
-    ctx.restore();
-
-    ctx.save();ctx.globalCompositeOperation='screen';ctx.globalAlpha=.055;ctx.strokeStyle=biome.accent;ctx.lineWidth=2;
-    for(let y=-30;y<H+40;y+=52){ctx.beginPath();for(let x=-20;x<W+30;x+=18){const yy=y+Math.sin(x*.035+time*1.2+y*.01)*9;x===-20?ctx.moveTo(x,yy):ctx.lineTo(x,yy);}ctx.stroke();}
-    ctx.restore();
-
-    for(const isl of islands) drawIsland(isl);
-
-    ctx.save(); ctx.globalAlpha=.12; ctx.strokeStyle='#9df8ec'; ctx.lineWidth=1;
-    for(let y=(time*10)%70-70;y<H;y+=70){
-      ctx.beginPath();
-      for(let x=-20;x<W+20;x+=24){
-        const yy=y+Math.sin(x*.025+time*.6)*5;
-        x===-20?ctx.moveTo(x,yy):ctx.lineTo(x,yy);
-      }
-      ctx.stroke();
-    }
-    ctx.restore();
-
     if(biome.weather==='storm'){ctx.save();ctx.strokeStyle='#d7ccff';ctx.lineWidth=1;for(const r of rain){const y=(r.y+time*r.speed)%H;ctx.globalAlpha=r.alpha;ctx.beginPath();ctx.moveTo(r.x,y);ctx.lineTo(r.x-4,y+r.l);ctx.stroke();}ctx.restore();}
     if(biome.weather==='embers'){ctx.save();for(let i=0;i<24;i++){const x=(i*83+Math.sin(i*3.1)*41)%W,y=H-((time*(18+i%5*5)+i*97)%(H+40));ctx.globalAlpha=.12+(i%4)*.04;ctx.fillStyle=i%2?'#ff9a72':'#ffd46d';ctx.fillRect(x,y,2,2);}ctx.restore();}
-  }
-
-  function drawIsland(isl){
-    ctx.save(); ctx.translate(isl.x,isl.y); ctx.rotate(isl.angle);
-    ctx.fillStyle='rgba(0,0,0,.18)';
-    ctx.beginPath();
-    isl.pts.forEach((p,i)=>{const x=Math.cos(p.a)*p.r+7,y=Math.sin(p.a)*p.r+12;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.closePath();ctx.fill();
-    const colors=isl.hue>.5?['#183f46','#226050','#31745a']:['#173b4b','#23566a','#337b7b'];
-    ctx.beginPath(); isl.pts.forEach((p,i)=>{const x=Math.cos(p.a)*p.r,y=Math.sin(p.a)*p.r;i?ctx.lineTo(x,y):ctx.moveTo(x,y)}); ctx.closePath(); ctx.fillStyle=colors[0];ctx.fill();
-    for(let i=0;i<isl.pts.length;i+=2){
-      const p=isl.pts[i],q=isl.pts[(i+1)%isl.pts.length];
-      ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.cos(p.a)*p.r,Math.sin(p.a)*p.r);ctx.lineTo(Math.cos(q.a)*q.r,Math.sin(q.a)*q.r);ctx.closePath();ctx.fillStyle=colors[(i/2)%2+1];ctx.fill();
-    }
-    if(isl.r>40){
-      ctx.fillStyle='#73a66d'; polygon(-isl.r*.18,-isl.r*.08,isl.r*.13,3,-.7);ctx.fill();
-      ctx.fillStyle='#47745e';polygon(isl.r*.2,isl.r*.06,isl.r*.1,3,.2);ctx.fill();
-    }
-    for(let i=0;i<isl.detail;i++){const a=i/isl.detail*TAU+isl.hue*4,r=isl.r*(.18+(i%2)*.22);ctx.fillStyle=i%2?'#86a98a':'#406c62';polygon(Math.cos(a)*r,Math.sin(a)*r,3+(i%3),3,a);ctx.fill();}
-    if(isl.crystal){ctx.shadowColor=currentBiome().accent;ctx.shadowBlur=8;ctx.fillStyle=currentBiome().accent;polygon(isl.r*.08,-isl.r*.12,6,4,Math.PI/4);ctx.fill();ctx.shadowBlur=0;}
-    ctx.restore();
   }
 
   function drawShard(s){
@@ -710,12 +643,12 @@
     if(blink)return;
     ctx.save();ctx.translate(player.x,player.y);ctx.rotate(player.angle+Math.PI/2);
     if(player.shield>0){ctx.strokeStyle=palette.blue;ctx.globalAlpha=.35+.15*Math.sin(time*5);ctx.lineWidth=3;ctx.shadowColor=palette.blue;ctx.shadowBlur=14;polygon(0,0,25,6,time*.4);ctx.stroke();ctx.globalAlpha=1;ctx.shadowBlur=0;}
-    ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(6,12,16,10,0,0,TAU);ctx.fill();
-    ctx.shadowColor=palette.aqua;ctx.shadowBlur=15;
-    ctx.fillStyle=palette.aqua;ctx.beginPath();ctx.moveTo(0,-20);ctx.lineTo(14,15);ctx.lineTo(0,9);ctx.lineTo(-14,15);ctx.closePath();ctx.fill();
-    ctx.shadowBlur=0;ctx.fillStyle='#d8fff9';ctx.beginPath();ctx.moveTo(0,-20);ctx.lineTo(0,9);ctx.lineTo(-14,15);ctx.closePath();ctx.fill();
-    ctx.fillStyle=palette.blue;ctx.beginPath();ctx.moveTo(0,-20);ctx.lineTo(14,15);ctx.lineTo(0,9);ctx.closePath();ctx.fill();
-    ctx.fillStyle=palette.gold;polygon(0,2,4.2,4,Math.PI/4);ctx.fill();
+    if(shipArt.complete&&shipArt.naturalWidth){
+      ctx.save();ctx.globalAlpha=.3;ctx.filter='brightness(0)';ctx.drawImage(shipArt,-34+5,-42+8,68,84);ctx.restore();
+      ctx.shadowColor=palette.aqua;ctx.shadowBlur=18;ctx.drawImage(shipArt,-34,-42,68,84);ctx.shadowBlur=0;
+    }else{
+      ctx.shadowColor=palette.aqua;ctx.shadowBlur=15;ctx.fillStyle=palette.aqua;ctx.beginPath();ctx.moveTo(0,-24);ctx.lineTo(18,18);ctx.lineTo(0,10);ctx.lineTo(-18,18);ctx.closePath();ctx.fill();ctx.shadowBlur=0;
+    }
     ctx.restore();
 
     if(player.drone>0){
@@ -788,11 +721,7 @@
   }
 
   function drawMenuScene(){
-    for(let i=0;i<7;i++){
-      const y=((i*150+time*18)%(H+180))-90;
-      const x=W*.5+Math.sin(i*1.8+time*.3)*W*.36;
-      ctx.save();ctx.globalAlpha=.2;ctx.translate(x,y);ctx.rotate(time*.2+i);ctx.fillStyle=i%2?palette.aqua:palette.blue;polygon(0,0,8+(i%3)*4,4,Math.PI/4);ctx.fill();ctx.restore();
-    }
+    // The authored ocean artwork is intentionally left unobstructed on the menu.
   }
 
   function frame(now){
