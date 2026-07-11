@@ -25,5 +25,8 @@ Runs begin with a short background title sequence and a safe exploration window
 before the first enemy arrives; the end-of-run screen is intentionally compact.
 The background renderer deliberately avoids extra procedural islands and polygon
 overlays so the authored ocean artwork remains clear and visually coherent.
+Pulse uses layered polygon shock fronts; Dash uses directional streaks and ship
+afterimages. The interface follows an opaque naval-instrument design system with
+cut corners, technical linework, cyan controls, and orange signal accents.
 
 Serve the folder over HTTP for local development. GitHub Pages deploys `main` automatically.
