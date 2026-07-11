@@ -15,6 +15,14 @@
     {id:'magnet',icon:'◉',name:'MAGNET',desc:'+8 pickup range / mark'},
     {id:'cannon',icon:'✹',name:'CANNON',desc:'+4% fire rate / mark'}
   ];
+  const codexEntries=[
+    {id:'hunter',name:'HUNTER',desc:'Fast pursuit craft'},
+    {id:'spinner',name:'SPINNER',desc:'Unstable interceptor'},
+    {id:'seer',name:'SEER',desc:'Long-range artillery'},
+    {id:'brute',name:'BRUTE',desc:'Armoured rammer'},
+    {id:'wraith',name:'WRAITH',desc:'Phasing predator'},
+    {id:'leviathan',name:'LEVIATHAN',desc:'Three-phase abyss boss'}
+  ];
 
   function bindTap(el, fn) {
     if (!el) return;
@@ -28,7 +36,22 @@
     $('profileLevel').textContent=p.level; $('profileCurrency').textContent=p.currency;
     $('hangarStats').innerHTML=`<span>RANK<b>${p.level}</b></span><span>RUNS<b>${p.totalRuns}</b></span><span>KILLS<b>${p.totalKills}</b></span><span>BOSSES<b>${p.bosses}</b></span>`;
     $('shipPreview').style.color=skins.find(x=>x.id===p.selectedSkin)?.color;
-    renderCores(); renderSkins(); renderMissions();
+    renderCores(); renderSkins(); renderMissions(); renderCodex();
+  }
+
+  function codexPolygon(ctx,x,y,r,n,rotation=0){ctx.beginPath();for(let i=0;i<n;i++){const a=rotation+i/n*Math.PI*2,px=x+Math.cos(a)*r,py=y+Math.sin(a)*r;i?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.closePath();}
+  function drawCodexAsset(canvas,type,unlocked){
+    const dpr=Math.min(devicePixelRatio||1,2),w=112,h=78;canvas.width=w*dpr;canvas.height=h*dpr;canvas.style.width=`${w}px`;canvas.style.height=`${h}px`;const c=canvas.getContext('2d');c.scale(dpr,dpr);c.translate(w/2,h/2);c.globalAlpha=unlocked?1:.32;const color=unlocked?({hunter:'#5c9fff',spinner:'#bd75ff',seer:'#ffd46d',brute:'#ff7182',wraith:'#9d71e8',leviathan:'#ff5470'}[type]):'#02070d';c.shadowColor=unlocked?color:'transparent';c.shadowBlur=unlocked?14:0;c.fillStyle=color;c.strokeStyle=color;c.lineWidth=4;
+    if(type==='hunter'){c.beginPath();c.moveTo(0,-25);c.lineTo(20,20);c.lineTo(0,9);c.lineTo(-20,20);c.closePath();c.fill();}
+    else if(type==='spinner'){for(let i=0;i<3;i++){c.rotate(Math.PI*2/3);c.beginPath();c.moveTo(0,0);c.lineTo(7,-28);c.lineTo(-7,-17);c.closePath();c.fill();}codexPolygon(c,0,0,9,6);c.fill();}
+    else if(type==='seer'){codexPolygon(c,0,0,24,4,Math.PI/4);c.stroke();c.beginPath();c.arc(0,0,10,0,Math.PI*2);c.fill();}
+    else if(type==='leviathan'){codexPolygon(c,0,0,31,8,.2);c.fill();c.fillStyle=unlocked?'#5a1732':'#071018';codexPolygon(c,0,0,21,6,-.3);c.fill();}
+    else {codexPolygon(c,0,0,type==='brute'?25:20,type==='brute'?6:5,.25);c.fill();}
+    if(!unlocked){c.globalAlpha=.9;c.fillStyle='#66808d';c.shadowBlur=0;c.font='900 18px sans-serif';c.textAlign='center';c.fillText('?',0,6);}
+  }
+  function renderCodex(){
+    const found=S.profile.discovered||[];$('codexProgress').textContent=`${found.length}/${codexEntries.length}`;$('codexGrid').innerHTML='';
+    for(const entry of codexEntries){const unlocked=found.includes(entry.id),card=document.createElement('article'),canvas=document.createElement('canvas');card.className=unlocked?'discovered':'locked';const info=document.createElement('div');info.innerHTML=`<b>${unlocked?entry.name:'UNKNOWN'}</b><span>${unlocked?entry.desc:'Encounter this entity to reveal it'}</span>`;drawCodexAsset(canvas,entry.id,unlocked);card.appendChild(canvas);card.appendChild(info);$('codexGrid').appendChild(card);}
   }
 
   function renderCores(){
@@ -76,6 +99,7 @@
   bindTap($('resetProgress'),()=>{ if(confirm('Reset all Shardwake progress?')) S.reset(); });
   window.addEventListener('shardwake:toast',e=>{const t=document.createElement('div');t.className=`toast ${e.detail.tone}`;t.textContent=e.detail.text;$('toastLayer').appendChild(t);setTimeout(()=>t.remove(),3200);});
   window.addEventListener('shardwake:profile',updateProfile);
+  window.addEventListener('shardwake:discovery',renderCodex);
   window.addEventListener('error',()=>{$('bootError').hidden=false;});
   document.addEventListener('selectstart',e=>e.preventDefault(),{passive:false});
   document.addEventListener('dragstart',e=>e.preventDefault(),{passive:false});
