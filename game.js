@@ -3,6 +3,9 @@
 
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d', { alpha: false });
+  const backgroundArt = new Image();
+  backgroundArt.decoding = 'async';
+  backgroundArt.src = 'assets/shardwake-ocean.webp';
   const $ = id => document.getElementById(id);
 
   const ui = {
@@ -634,6 +637,11 @@
     g.addColorStop(0,biome.top); g.addColorStop(.55,biome.mid); g.addColorStop(1,biome.bottom);
     ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
 
+    if(backgroundArt.complete&&backgroundArt.naturalWidth){
+      const scale=Math.max(W/backgroundArt.naturalWidth,H/backgroundArt.naturalHeight),dw=backgroundArt.naturalWidth*scale,dh=backgroundArt.naturalHeight*scale;
+      ctx.save();ctx.globalAlpha=biome.weather==='storm'?.62:biome.weather==='embers'?.48:.68;ctx.globalCompositeOperation='soft-light';ctx.drawImage(backgroundArt,(W-dw)/2,(H-dh)/2,dw,dh);ctx.restore();
+    }
+
     ctx.save(); ctx.globalAlpha=.18;
     for(const f of seaFacets){
       ctx.fillStyle=[biome.top,biome.mid,biome.bottom][f.shade];
@@ -793,7 +801,7 @@
     if(state!=='playing'||input.active)return;
     audio.ensure();
     const p=pointerPos(e);input.active=true;input.pointerId=e.pointerId;input.ox=p.x;input.oy=p.y;
-    const size=110;ui.stickBase.style.left=`${clamp(p.x-size/2,18,W*.62-size-6)}px`;ui.stickBase.style.bottom='auto';ui.stickBase.style.top=`${clamp(p.y-size/2,90,H-size-30)}px`;
+    const size=110,zoneWidth=W>H?W*.45:W*.62;ui.stickBase.style.left=`${clamp(p.x-size/2,18,zoneWidth-size-6)}px`;ui.stickBase.style.bottom='auto';ui.stickBase.style.top=`${clamp(p.y-size/2,72,H-size-20)}px`;
     updateStick(e);
     ui.stickZone.setPointerCapture?.(e.pointerId);
   }
