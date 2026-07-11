@@ -19,5 +19,8 @@ five wake signatures, three procedural biomes, weather, ranged enemies, hostile
 projectiles with a graze mechanic, relic drops, and a three-phase Leviathan boss.
 The interface supports portrait and landscape play, safe-area insets, edge-docked
 controls, and blocks accidental text selection or long-press callouts on mobile.
+Enemy silhouettes are unlocked permanently in the Codex when first encountered.
+Runs begin with a short background title sequence and a safe exploration window
+before the first enemy arrives; the end-of-run screen is intentionally compact.
 
 Serve the folder over HTTP for local development. GitHub Pages deploys `main` automatically.
