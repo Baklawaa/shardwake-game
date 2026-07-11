@@ -77,6 +77,8 @@
   window.addEventListener('shardwake:toast',e=>{const t=document.createElement('div');t.className=`toast ${e.detail.tone}`;t.textContent=e.detail.text;$('toastLayer').appendChild(t);setTimeout(()=>t.remove(),3200);});
   window.addEventListener('shardwake:profile',updateProfile);
   window.addEventListener('error',()=>{$('bootError').hidden=false;});
+  document.addEventListener('selectstart',e=>e.preventDefault(),{passive:false});
+  document.addEventListener('dragstart',e=>e.preventDefault(),{passive:false});
   if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
   updateProfile(); applySettings();
 })();
