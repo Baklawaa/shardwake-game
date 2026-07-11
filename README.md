@@ -30,5 +30,7 @@ overlays so the authored ocean artwork remains clear and visually coherent.
 Pulse uses layered polygon shock fronts; Dash uses directional streaks and ship
 afterimages. The interface follows an opaque naval-instrument design system with
 cut corners, technical linework, cyan controls, and orange signal accents.
+Multi-touch input uses one pointer owner for steering and global release/cancel
+recovery, preventing movement from remaining latched after Pulse or Dash.
 
 Serve the folder over HTTP for local development. GitHub Pages deploys `main` automatically.

@@ -154,6 +154,7 @@
 
   function startGame() {
     audio.ensure();
+    resetInput();
     resetGame();
     state = 'playing';
     showOnly(null);
@@ -162,6 +163,7 @@
   }
 
   function goMenu() {
+    resetInput();
     state = 'menu';
     ui.hud.classList.add('hidden');
     ui.controls.classList.add('hidden');
@@ -171,6 +173,7 @@
 
   function pauseGame() {
     if (state !== 'playing') return;
+    resetInput();
     state = 'paused';
     showOnly('pause');
     ui.controls.classList.add('hidden');
@@ -186,6 +189,7 @@
 
   function gameOver() {
     if (state === 'over') return;
+    resetInput();
     state = 'over';
     audio.explode(); haptic([25, 35, 70]);
     burst(player.x, player.y, palette.aqua, 34, 260);
@@ -783,8 +787,16 @@
   }
 
   function pointerPos(e){return{x:e.clientX,y:e.clientY};}
+  function resetInput(){
+    const pointerId=input.pointerId;
+    input.active=false;input.pointerId=null;input.x=0;input.y=0;input.ox=0;input.oy=0;
+    ui.stickKnob.style.transform='translate(0,0)';
+    if(pointerId!=null){try{if(ui.stickZone.hasPointerCapture?.(pointerId))ui.stickZone.releasePointerCapture(pointerId);}catch(_){}}
+  }
   function startStick(e){
     if(state!=='playing'||input.active)return;
+    if(e.pointerType==='mouse'&&e.button!==0)return;
+    if(e.cancelable)e.preventDefault();
     audio.ensure();
     const p=pointerPos(e);input.active=true;input.pointerId=e.pointerId;input.ox=p.x;input.oy=p.y;
     const size=110,zoneWidth=W>H?W*.6:W*.78;ui.stickBase.style.left=`${clamp(p.x-size/2,18,zoneWidth-size-6)}px`;ui.stickBase.style.bottom='auto';ui.stickBase.style.top=`${clamp(p.y-size/2,60,H-size-20)}px`;
@@ -793,13 +805,15 @@
   }
   function updateStick(e){
     if(!input.active||e.pointerId!==input.pointerId)return;
+    if(e.pointerType==='mouse'&&e.buttons===0){resetInput();return;}
+    if(e.cancelable)e.preventDefault();
     const p=pointerPos(e),dx=p.x-input.ox,dy=p.y-input.oy,max=42,m=Math.hypot(dx,dy),k=m>max?max/m:1;
     input.x=clamp(dx/max,-1,1);input.y=clamp(dy/max,-1,1);
     ui.stickKnob.style.transform=`translate(${dx*k}px,${dy*k}px)`;
   }
   function endStick(e){
     if(e.pointerId!==input.pointerId)return;
-    input.active=false;input.pointerId=null;input.x=0;input.y=0;ui.stickKnob.style.transform='translate(0,0)';
+    resetInput();
   }
 
   // iPhone previews vary between Pointer Events, Touch Events and synthesized clicks.
@@ -808,15 +822,16 @@
     let lastFire = -1000;
     let done = false;
     const fire = e => {
+      if (e?.cancelable) e.preventDefault();
+      e?.stopPropagation?.();
       const now = performance.now();
       if (done || now - lastFire < 350) return;
       lastFire = now;
-      if (e?.cancelable) e.preventDefault();
       handler(e);
       if (once) done = true;
     };
-    element.addEventListener('pointerdown', fire, { passive: false });
-    element.addEventListener('touchstart', fire, { passive: false });
+    if(window.PointerEvent)element.addEventListener('pointerdown',fire,{passive:false});
+    else element.addEventListener('touchstart',fire,{passive:false});
     element.addEventListener('click', fire, { passive: false });
   }
 
@@ -835,6 +850,11 @@
   ui.stickZone.addEventListener('pointermove',updateStick);
   ui.stickZone.addEventListener('pointerup',endStick);
   ui.stickZone.addEventListener('pointercancel',endStick);
+  ui.stickZone.addEventListener('lostpointercapture',endStick);
+  window.addEventListener('pointerup',endStick,true);
+  window.addEventListener('pointercancel',endStick,true);
+  window.addEventListener('blur',resetInput);
+  window.addEventListener('pagehide',resetInput);
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&state==='playing')pauseGame();});
   window.addEventListener('resize',resize);
   window.visualViewport?.addEventListener('resize',resize);
