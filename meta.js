@@ -35,8 +35,14 @@
     const p=S.profile;
     $('profileLevel').textContent=p.level; $('profileCurrency').textContent=p.currency;
     $('hangarStats').innerHTML=`<span>RANK<b>${p.level}</b></span><span>RUNS<b>${p.totalRuns}</b></span><span>KILLS<b>${p.totalKills}</b></span><span>BOSSES<b>${p.bosses}</b></span>`;
-    $('shipPreview').style.setProperty('--ship-glow',skins.find(x=>x.id===p.selectedSkin)?.color||'#64f0da');
+    const shipColor=skins.find(x=>x.id===p.selectedSkin)?.color||'#64f0da';$('shipPreview').style.setProperty('--ship-glow',shipColor);drawHangarCraft(shipColor);
     renderCores(); renderSkins(); renderMissions(); renderCodex();
+  }
+
+  function drawHangarCraft(accent){
+    const canvas=$('shipPreviewCanvas'),dpr=Math.min(devicePixelRatio||1,2),w=170,h=180;canvas.width=w*dpr;canvas.height=h*dpr;canvas.style.width=`${w}px`;canvas.style.height=`${h}px`;const c=canvas.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);c.translate(w/2,h/2+7);c.scale(2.05,2.05);
+    const poly=(pts,color)=>{c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fillStyle=color;c.fill();};const hull=[[0,-36],[8,-20],[14,-8],[31,7],[25,20],[11,14],[8,29],[0,22],[-8,29],[-11,14],[-25,20],[-31,7],[-14,-8],[-8,-20]];
+    c.shadowColor=accent;c.shadowBlur=9;poly(hull,'#0a2830');c.shadowBlur=0;c.strokeStyle=accent;c.lineWidth=1.3;c.stroke();poly([[0,-36],[-8,-20],[-14,-8],[0,3]],'#d3e1de');poly([[0,-36],[8,-20],[14,-8],[0,3]],'#17646a');poly([[-14,-8],[-31,7],[-25,20],[-4,10],[0,3]],'#244a54');poly([[14,-8],[31,7],[25,20],[4,10],[0,3]],'#0d5960');poly([[0,-21],[-7,-7],[0,7],[7,-7]],'#06161c');poly([[0,-17],[-4,-7],[0,1],[4,-7]],accent);poly([[0,4],[-6,11],[0,18],[6,11]],'#f2a65a');poly([[-13,10],[-21,14],[-12,17],[-6,11]],accent);poly([[13,10],[21,14],[12,17],[6,11]],accent);
   }
 
   function codexPolygon(ctx,x,y,r,n,rotation=0){ctx.beginPath();for(let i=0;i<n;i++){const a=rotation+i/n*Math.PI*2,px=x+Math.cos(a)*r,py=y+Math.sin(a)*r;i?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.closePath();}
