@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Shardwake app mark</title><desc id="desc">An angular cyan sea skimmer and golden reactor inside an octagonal naval instrument frame.</desc>
+  <rect width="1024" height="1024" fill="#07161a"/>
+  <g fill="none" stroke="#173238" stroke-width="8" opacity=".72"><path d="M0 256h1024M0 512h1024M0 768h1024M256 0v1024M512 0v1024M768 0v1024"/></g>
+  <path d="M190 102h644l88 88v644l-88 88H190l-88-88V190z" fill="#091f23" stroke="#31545a" stroke-width="20"/>
+  <g fill="none" stroke="#f2a65a" stroke-width="22" stroke-linecap="square"><path d="M260 658l-94 72M300 730l-72 86M764 658l94 72M724 730l72 86"/></g>
+  <path d="M512 130l192 300-76 382-116 94-116-94-76-382z" fill="#0e4247" stroke="#35d6c7" stroke-width="24"/>
+  <path d="M512 130v776L396 812l-76-382z" fill="#c8ddd8" opacity=".88"/>
+  <path d="M512 262l92 194-40 246-52 54-52-54-40-246z" fill="#07161a" stroke="#58eee0" stroke-width="18"/>
+  <path d="M512 346l48 140-48 64-48-64z" fill="#2faea5"/>
+  <path d="M512 500l68 82-68 96-68-96z" fill="#f2a65a" stroke="#ffe0a3" stroke-width="14"/>
+  <path d="M512 526l28 56-28 44-28-44z" fill="#fff0c6"/>
+  <g fill="#35d6c7"><path d="M348 512l-118 70 100 18zM676 512l118 70-100 18z"/></g>
+</svg>

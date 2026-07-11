@@ -12,6 +12,8 @@ A mobile-first, low-poly survival game built with the Canvas 2D API and no exter
 - `manifest.json` / `sw.js` — installable, offline-capable PWA
 - `assets/shardwake-ocean.webp` — optimized generated low-poly ocean artwork used by the canvas renderer
 - `assets/shardwake-ship.png` — transparent generated player craft shared by gameplay and Hangar preview
+- `assets/shardwake-mark.svg` — scalable game mark used by the home title lockup and browser favicon
+- `assets/icons/` — 180, 192, 512 and maskable PWA icon exports
 
 ## Game systems
 
